@@ -54,6 +54,7 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
+        panel.sharingType = .readOnly
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.contentView = content(for: event, session: session, size: size)
         panel.orderFrontRegardless()
