@@ -43,7 +43,7 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         )
         let panel = NSPanel(
             contentRect: frame,
-            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
+            styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
