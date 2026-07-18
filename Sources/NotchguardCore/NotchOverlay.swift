@@ -26,6 +26,7 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
     private func present(_ event: AgentEvent, session: AgentSession) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
+        app.finishLaunching()
         closeWorkItem?.cancel()
         panel?.orderOut(nil)
         self.session = session
