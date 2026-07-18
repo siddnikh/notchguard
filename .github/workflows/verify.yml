@@ -13,3 +13,9 @@ jobs:
         run: swift test
       - name: Build universal binary
         run: ./scripts/build-universal.sh
+      - name: Upload universal binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: notchguard-macos-universal
+          path: dist/notchguard
+          if-no-files-found: error
