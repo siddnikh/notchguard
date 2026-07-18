@@ -75,6 +75,7 @@ struct Notchguard {
         let payload = try OverlayPayload.decode(encoded)
         let application = NSApplication.shared
         application.setActivationPolicy(.accessory)
+        application.finishLaunching()
         NotchOverlay.shared.show(payload.event, session: payload.session)
         DispatchQueue.main.asyncAfter(
             deadline: .now() + NotchOverlay.displayDuration(for: payload.event.kind) + 0.3

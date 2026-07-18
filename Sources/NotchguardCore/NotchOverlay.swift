@@ -12,7 +12,11 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
     private var session: AgentSession?
 
     public func show(_ event: AgentEvent, session: AgentSession) {
-        DispatchQueue.main.async { [weak self] in self?.present(event, session: session) }
+        if Thread.isMainThread {
+            present(event, session: session)
+        } else {
+            DispatchQueue.main.async { [weak self] in self?.present(event, session: session) }
+        }
     }
 
     public static func displayDuration(for kind: AgentEventKind) -> TimeInterval {
