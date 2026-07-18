@@ -26,7 +26,6 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
     private func present(_ event: AgentEvent, session: AgentSession) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
-        app.finishLaunching()
         closeWorkItem?.cancel()
         panel?.orderOut(nil)
         self.session = session
@@ -46,10 +45,13 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
             defer: false
         )
         panel.level = .statusBar
+        panel.isFloatingPanel = true
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.hidesOnDeactivate = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.contentView = content(for: event, session: session, size: size)
         panel.alphaValue = 0
         panel.orderFrontRegardless()

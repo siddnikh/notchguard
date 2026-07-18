@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import NotchguardCore
 import Darwin
@@ -72,10 +73,15 @@ struct Notchguard {
     private static func present(arguments: [String]) throws {
         guard let encoded = arguments.first else { throw CLIError.usage("Missing presentation payload.") }
         let payload = try OverlayPayload.decode(encoded)
+        let application = NSApplication.shared
+        application.setActivationPolicy(.accessory)
         NotchOverlay.shared.show(payload.event, session: payload.session)
-        RunLoop.main.run(
-            until: Date(timeIntervalSinceNow: NotchOverlay.displayDuration(for: payload.event.kind) + 0.4)
-        )
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + NotchOverlay.displayDuration(for: payload.event.kind) + 0.3
+        ) {
+            application.stop(nil)
+        }
+        application.run()
     }
 
     private static func demo() {
