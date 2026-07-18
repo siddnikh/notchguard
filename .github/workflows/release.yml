@@ -18,7 +18,7 @@ jobs:
       - name: Build universal binary
         run: ./scripts/build-universal.sh
       - name: Create checksum
-        run: shasum -a 256 dist/notchguard > dist/notchguard.sha256
+        run: cd dist && shasum -a 256 notchguard > notchguard.sha256
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
