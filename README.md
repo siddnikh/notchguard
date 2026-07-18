@@ -37,6 +37,14 @@ The wrapped process retains your current directory, environment, standard input,
 
 `notchguard jump` activates Terminal and opens the current directory using AppleScript, falling back to `open -a Terminal` when needed.
 
+## Update
+
+Updates are always manual. `notchguard update` downloads the latest universal binary from this repository's public releases and atomically replaces a directly installed, writable binary. It refuses to replace symbolic links, so package-managed installs stay under their package manager's control.
+
+```sh
+notchguard update
+```
+
 ## Plugins
 
 Plugins are local folders ending in `.notchplugin` with a `plugin.json` manifest. They add parser rules without running arbitrary plugin code.
@@ -77,7 +85,7 @@ The project is a dependency-free Swift Package, targeted at macOS 13+. `scripts/
 
 ## Privacy
 
-Notchguard has no network client, analytics, or background daemon. Output is parsed in memory and only the short, relevant line becomes the local notification body.
+Notchguard has no analytics or background daemon. Output is parsed in memory and only the short, relevant line becomes the local notification body. The sole network operation is the explicit `notchguard update` command, which downloads the public release binary from this repository.
 
 ## License
 

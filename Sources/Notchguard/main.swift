@@ -28,7 +28,8 @@ struct Notchguard {
         case "codex": try runAgent(command: "codex", arguments: args)
         case "plugins": try plugins(arguments: args)
         case "jump": try TerminalJumper.jump(to: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
-        case "version", "--version", "-v": print("notchguard 0.1.0")
+        case "update": print(try SelfUpdater.update())
+        case "version", "--version", "-v": print("notchguard 0.1.1")
         case "help", "--help", "-h": print(help)
         default: throw CLIError.usage("Unknown command '\(command)'.\n\n\(help)")
         }
@@ -72,6 +73,7 @@ struct Notchguard {
       notchguard codex [codex arguments...]
       notchguard plugins <add|list|remove> [...]
       notchguard jump
+      notchguard update
 
     Only Claude Code and Codex are launched by this wrapper.
     """
@@ -82,4 +84,3 @@ struct Notchguard {
       notchguard plugins remove <identifier>
     """
 }
-

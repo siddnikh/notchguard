@@ -1,4 +1,5 @@
 import XCTest
+import Foundation
 @testable import NotchguardCore
 
 final class NotchguardCoreTests: XCTestCase {
@@ -27,5 +28,11 @@ final class NotchguardCoreTests: XCTestCase {
         let decoded = try JSONDecoder().decode(PluginManifest.self, from: JSONEncoder().encode(manifest))
         XCTAssertEqual(decoded, manifest)
     }
-}
 
+    func testUpdaterRecognizesUniversalMachOHeader() throws {
+        // This executes no network request: the public updater validates its
+        // downloaded bytes before replacing an installed binary.
+        XCTAssertTrue(SelfUpdater.isMachO(Data([0xCA, 0xFE, 0xBA, 0xBF])))
+        XCTAssertFalse(SelfUpdater.isMachO(Data("not a binary".utf8)))
+    }
+}
