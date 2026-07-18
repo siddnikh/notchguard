@@ -33,6 +33,7 @@ struct Notchguard {
         case "demo": demo()
         case "update": print(try SelfUpdater.update())
         case "__present": try present(arguments: args)
+        case "__snapshot": try snapshot(arguments: args)
         case "version", "--version", "-v": print("notchguard \(BuildInfo.version)")
         case "help", "--help", "-h": print(help)
         default: throw CLIError.usage("Unknown command '\(command)'.\n\n\(help)")
@@ -102,6 +103,14 @@ struct Notchguard {
             session: session
         )
         print("Notchguard is ready.")
+    }
+
+    private static func snapshot(arguments: [String]) throws {
+        guard let path = arguments.first else { throw CLIError.usage("Missing snapshot path.") }
+        let application = NSApplication.shared
+        application.setActivationPolicy(.prohibited)
+        application.finishLaunching()
+        try NotchOverlay.shared.writePreview(to: URL(fileURLWithPath: path))
     }
 
     private static let help = """

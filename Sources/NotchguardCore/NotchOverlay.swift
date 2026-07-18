@@ -26,6 +26,27 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         }
     }
 
+    public func writePreview(to destination: URL) throws {
+        let size = NSSize(width: 382, height: 66)
+        let event = AgentEvent(kind: .approvalRequired, summary: "Run the requested command?")
+        let session = AgentSession(
+            agentName: "Claude",
+            workingDirectory: URL(fileURLWithPath: "/Users/example/Projects/civic-tools"),
+            terminalTTY: nil
+        )
+        let view = content(for: event, session: session, size: size)
+        view.frame = NSRect(origin: .zero, size: size)
+        view.layoutSubtreeIfNeeded()
+        guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        guard let data = bitmap.representation(using: .png, properties: [:]) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: destination, options: .atomic)
+    }
+
     private func present(_ event: AgentEvent, session: AgentSession) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)

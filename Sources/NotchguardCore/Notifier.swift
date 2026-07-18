@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public protocol NotificationSending: Sendable {
     func send(_ event: AgentEvent, session: AgentSession)
@@ -56,11 +57,13 @@ public final class NotchNotifier: NotificationSending, @unchecked Sendable {
         let macOS = contents.appendingPathComponent("MacOS", isDirectory: true)
         let presenter = macOS.appendingPathComponent("notchguard-presenter")
         let plist = contents.appendingPathComponent("Info.plist")
+        let fingerprintFile = contents.appendingPathComponent(".source-sha256")
         let executable = currentExecutable()
+        let fingerprint = try sha256(of: executable)
 
         let isCurrent = fileManager.fileExists(atPath: presenter.path)
             && fileManager.fileExists(atPath: plist.path)
-            && fileManager.contentsEqual(atPath: executable.path, andPath: presenter.path)
+            && (try? String(contentsOf: fingerprintFile, encoding: .utf8)) == fingerprint
         guard !isCurrent else { return application }
 
         try fileManager.createDirectory(at: macOS, withIntermediateDirectories: true)
@@ -89,8 +92,14 @@ public final class NotchNotifier: NotificationSending, @unchecked Sendable {
             options: 0
         )
         try data.write(to: plist, options: .atomic)
+        try fingerprint.write(to: fingerprintFile, atomically: true, encoding: .utf8)
         try sign(application)
         return application
+    }
+
+    private func sha256(of file: URL) throws -> String {
+        let digest = SHA256.hash(data: try Data(contentsOf: file))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     private func sign(_ application: URL) throws {
