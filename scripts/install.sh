@@ -43,3 +43,4 @@ echo
 echo "Then start the agent you already use:"
 echo "  notchguard claude"
 echo "  notchguard codex"
+"$install_dir/notchguard" demo

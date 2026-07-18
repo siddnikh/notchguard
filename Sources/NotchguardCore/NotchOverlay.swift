@@ -85,7 +85,10 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         status.layer?.cornerRadius = 4
         status.translatesAutoresizingMaskIntoConstraints = false
 
-        let title = NSTextField(labelWithString: "\(session.agentName) \(event.actionTitle)")
+        let titleText = session.agentName == "Notchguard" && event.kind == .completed
+            ? "Notchguard is ready"
+            : "\(session.agentName) \(event.actionTitle)"
+        let title = NSTextField(labelWithString: titleText)
         title.font = .systemFont(ofSize: 13, weight: .semibold)
         title.textColor = NSColor(calibratedWhite: 0.97, alpha: 1)
         let detail = NSTextField(labelWithString: "\(session.projectName)  ·  \(event.summary)")

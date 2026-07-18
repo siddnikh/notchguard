@@ -12,7 +12,7 @@ macOS 13 or newer. No Xcode and no sudo required.
 curl -fsSL https://raw.githubusercontent.com/siddnikh/notchguard/main/scripts/install.sh | bash
 ```
 
-The installer places the universal Apple Silicon + Intel binary in `~/.local/bin` and tells you if that directory needs adding to your `PATH`.
+The installer places the universal Apple Silicon + Intel binary in `~/.local/bin`, tells you if that directory needs adding to your `PATH`, and shows one short ready cue so you know the notch presentation works.
 
 ## Use
 
@@ -29,6 +29,8 @@ Arguments pass through unchanged:
 notchguard claude "review the open changes"
 notchguard codex "explain this failing test"
 ```
+
+Run `notchguard demo` whenever you want to check the presentation without starting an agent.
 
 That is the whole daily workflow. The child process keeps the current directory, environment, pseudo-terminal interaction, output, input, and exit status. When attention is needed, **Return** brings the original Terminal tab forward; if that tab is gone, Terminal opens at the project directory.
 

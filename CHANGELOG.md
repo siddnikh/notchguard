@@ -8,6 +8,7 @@
 - Normalizes ANSI and carriage-return output and suppresses redraw spam.
 - Detects completion and failure from the real process exit status.
 - Adds a no-sudo, one-command installer.
+- Confirms a successful install with an immediate ready cue.
 
 ## 0.1.1
 
@@ -16,4 +17,3 @@
 ## 0.1.0
 
 - Initial public release with Claude Code and Codex wrappers, notch presentation, parser plugins, and universal macOS builds.
-

@@ -1,5 +1,6 @@
 import Foundation
 import NotchguardCore
+import Darwin
 
 enum CLIError: LocalizedError {
     case usage(String)
@@ -28,6 +29,7 @@ struct Notchguard {
         case "codex": try runAgent(command: "codex", arguments: args)
         case "plugins": try plugins(arguments: args)
         case "jump": try TerminalJumper.jump(to: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+        case "demo": demo()
         case "update": print(try SelfUpdater.update())
         case "__present": try present(arguments: args)
         case "version", "--version", "-v": print("notchguard 0.2.0")
@@ -76,6 +78,25 @@ struct Notchguard {
         )
     }
 
+    private static func demo() {
+        let tty: String?
+        if isatty(STDIN_FILENO) != 0, let pointer = ttyname(STDIN_FILENO) {
+            tty = String(cString: pointer)
+        } else {
+            tty = nil
+        }
+        let session = AgentSession(
+            agentName: "Notchguard",
+            workingDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
+            terminalTTY: tty
+        )
+        NotchNotifier.shared.send(
+            AgentEvent(kind: .completed, summary: "Start with the agent you already use."),
+            session: session
+        )
+        print("Notchguard is ready.")
+    }
+
     private static let help = """
     Notchguard — quiet macOS notifications for Claude Code and Codex.
 
@@ -84,6 +105,7 @@ struct Notchguard {
       notchguard codex [codex arguments...]
       notchguard plugins <add|list|remove> [...]
       notchguard jump
+      notchguard demo
       notchguard update
 
     Only Claude Code and Codex are launched by this wrapper.
