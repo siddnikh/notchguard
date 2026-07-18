@@ -1,6 +1,5 @@
 import AppKit
 import Foundation
-import QuartzCore
 
 /// A short-lived, non-activating panel positioned beneath the camera housing.
 /// It intentionally contains one message and one recovery action only.
@@ -57,19 +56,8 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.contentView = content(for: event, session: session, size: size)
-        panel.alphaValue = 0
         panel.orderFrontRegardless()
         self.panel = panel
-
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            panel.alphaValue = 1
-        } else {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.16
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                panel.animator().alphaValue = 1
-            }
-        }
 
         let workItem = DispatchWorkItem { [weak self] in self?.dismiss() }
         closeWorkItem = workItem
@@ -140,17 +128,7 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
     }
 
     private func dismiss() {
-        guard let panel else { return }
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            panel.orderOut(nil)
-        } else {
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.12
-                panel.animator().alphaValue = 0
-            }, completionHandler: {
-                panel.orderOut(nil)
-            })
-        }
+        panel?.orderOut(nil)
     }
 
     private func tint(for kind: AgentEventKind) -> NSColor {
