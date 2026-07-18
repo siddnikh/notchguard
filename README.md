@@ -4,6 +4,8 @@ Leave the terminal. Come back when your agent actually needs you.
 
 Notchguard wraps **Claude Code** and **Codex** on macOS. It preserves the real interactive session, stays silent while work is moving, and places one compact cue beneath the notch for approval, input, completion, or failure.
 
+![Notchguard showing a quiet approval cue beneath the macOS notch](docs/notchguard-preview.png)
+
 ## Install
 
 macOS 13 or newer. No Xcode and no sudo required.

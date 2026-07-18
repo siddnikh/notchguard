@@ -93,12 +93,18 @@ public struct BuiltInOutputParser: OutputParsing {
             "allow this command",
             "allow once",
             "do you want to proceed",
+            "do you want to approve network access",
+            "do you want to allow claude to",
             "do you want to run this command",
             "would you like to run the following command",
+            "choose how you'd like codex to proceed",
             "approve this action",
             "approval required",
             "permission required"
         ]) {
+            return AgentEvent(kind: .approvalRequired, summary: clean)
+        }
+        if lower.hasPrefix("use skill \"") && lower.hasSuffix("?") {
             return AgentEvent(kind: .approvalRequired, summary: clean)
         }
         if containsAny(lower, [

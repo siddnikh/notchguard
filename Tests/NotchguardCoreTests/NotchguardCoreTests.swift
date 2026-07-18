@@ -7,6 +7,18 @@ final class NotchguardCoreTests: XCTestCase {
         let event = BuiltInOutputParser().parse(line: "\u{001B}[33mDo you want to proceed with this command?\u{001B}[0m")
         XCTAssertEqual(event?.kind, .approvalRequired)
         XCTAssertEqual(event?.summary, "Do you want to proceed with this command?")
+        XCTAssertEqual(
+            BuiltInOutputParser().parse(line: "Choose how you'd like Codex to proceed.")?.kind,
+            .approvalRequired
+        )
+        XCTAssertEqual(
+            BuiltInOutputParser().parse(line: "Do you want to allow Claude to fetch this content?")?.kind,
+            .approvalRequired
+        )
+        XCTAssertEqual(
+            BuiltInOutputParser().parse(line: "Use skill \"release-check\"?")?.kind,
+            .approvalRequired
+        )
     }
 
     func testBuiltInParserLeavesNormalOutputAlone() {
