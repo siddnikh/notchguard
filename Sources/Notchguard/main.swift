@@ -29,18 +29,20 @@ struct Notchguard {
         case "plugins": try plugins(arguments: args)
         case "jump": try TerminalJumper.jump(to: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
         case "update": print(try SelfUpdater.update())
-        case "version", "--version", "-v": print("notchguard 0.1.1")
+        case "__present": try present(arguments: args)
+        case "version", "--version", "-v": print("notchguard 0.2.0")
         case "help", "--help", "-h": print(help)
         default: throw CLIError.usage("Unknown command '\(command)'.\n\n\(help)")
         }
     }
 
     private static func runAgent(command: String, arguments: [String]) throws {
-        let notifier = NativeNotifier.shared
-        notifier.prepare()
+        let notifier = NotchNotifier.shared
         let store = PluginStore()
         let parser = CompositeOutputParser([BuiltInOutputParser()] + store.parsers())
-        let monitor = AgentMonitor(parser: parser) { event in notifier.send(event) }
+        let monitor = AgentMonitor(parser: parser) { event, session in
+            notifier.send(event, session: session)
+        }
         let status = try monitor.run(command: command, arguments: arguments)
         if status != 0 { exit(status) }
     }
@@ -63,6 +65,15 @@ struct Notchguard {
             print("Removed \(identifier)")
         default: throw CLIError.usage(pluginHelp)
         }
+    }
+
+    private static func present(arguments: [String]) throws {
+        guard let encoded = arguments.first else { throw CLIError.usage("Missing presentation payload.") }
+        let payload = try OverlayPayload.decode(encoded)
+        NotchOverlay.shared.show(payload.event, session: payload.session)
+        RunLoop.main.run(
+            until: Date(timeIntervalSinceNow: NotchOverlay.displayDuration(for: payload.event.kind) + 0.4)
+        )
     }
 
     private static let help = """

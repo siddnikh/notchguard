@@ -1,58 +1,102 @@
 import Foundation
-import UserNotifications
 
 public protocol NotificationSending: Sendable {
-    func send(_ event: AgentEvent)
+    func send(_ event: AgentEvent, session: AgentSession)
 }
 
-public final class NativeNotifier: NSObject, NotificationSending, UNUserNotificationCenterDelegate, @unchecked Sendable {
-    public static let shared = NativeNotifier()
+public struct OverlayPayload: Codable, Equatable, Sendable {
+    public let event: AgentEvent
+    public let session: AgentSession
 
-    public func prepare() {
-        let center = UNUserNotificationCenter.current()
-        center.delegate = self
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    public init(event: AgentEvent, session: AgentSession) {
+        self.event = event
+        self.session = session
     }
 
-    public func send(_ event: AgentEvent) {
-        NotchOverlay.shared.show(event)
-        let content = UNMutableNotificationContent()
-        content.title = event.title
-        content.body = event.summary.prefix(220).description
-        content.sound = .default
-        content.categoryIdentifier = "NOTCHGUARD_AGENT"
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        // The system banner is the accessible fallback when a notch panel is
-        // hidden by full-screen work or a display does not have a camera housing.
-        UNUserNotificationCenter.current().add(request)
+    public func encoded() throws -> String {
+        try JSONEncoder().encode(self).base64EncodedString()
     }
 
-    public func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
+    public static func decode(_ value: String) throws -> OverlayPayload {
+        guard let data = Data(base64Encoded: value) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return try JSONDecoder().decode(OverlayPayload.self, from: data)
+    }
+}
+
+public final class NotchNotifier: NotificationSending, @unchecked Sendable {
+    public static let shared = NotchNotifier()
+
+    public func send(_ event: AgentEvent, session: AgentSession) {
+        guard let payload = try? OverlayPayload(event: event, session: session).encoded() else { return }
+        let process = Process()
+        process.executableURL = currentExecutable()
+        process.arguments = ["__present", payload]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+    }
+
+    private func currentExecutable() -> URL {
+        let argument = CommandLine.arguments[0]
+        if argument.contains("/") {
+            return URL(
+                fileURLWithPath: argument,
+                relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            ).standardizedFileURL
+        }
+        let paths = (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":")
+        return paths
+            .map { URL(fileURLWithPath: String($0)).appendingPathComponent(argument) }
+            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+            ?? URL(fileURLWithPath: argument)
     }
 }
 
 public enum TerminalJumper {
-    public static func jump(to directory: URL) throws {
+    public static func jump(to directory: URL, terminalTTY: String? = nil) throws {
+        if let terminalTTY, try activateTerminalTab(terminalTTY) { return }
+        try openTerminal(at: directory)
+    }
+
+    private static func activateTerminalTab(_ terminalTTY: String) throws -> Bool {
         let script = """
         on run argv
+            set targetTTY to item 1 of argv
             tell application "Terminal"
-                activate
-                do script "cd " & quoted form of item 1 of argv in front window
+                repeat with terminalWindow in windows
+                    repeat with terminalTab in tabs of terminalWindow
+                        if tty of terminalTab is targetTTY then
+                            set selected tab of terminalWindow to terminalTab
+                            set index of terminalWindow to 1
+                            activate
+                            return "found"
+                        end if
+                    end repeat
+                end repeat
             end tell
+            return "missing"
         end run
         """
         let process = Process()
+        let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script, directory.path]
+        process.arguments = ["-e", script, terminalTTY]
+        process.standardOutput = output
+        process.standardError = Pipe()
         try process.run()
         process.waitUntilExit()
-        if process.terminationStatus != 0 {
-            let fallback = Process()
-            fallback.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            fallback.arguments = ["-a", "Terminal", directory.path]
-            try fallback.run()
-        }
+        let response = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return process.terminationStatus == 0 && response == "found"
     }
 
+    private static func openTerminal(at directory: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-a", "Terminal", directory.path]
+        try process.run()
+    }
 }

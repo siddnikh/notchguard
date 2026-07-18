@@ -31,6 +31,17 @@ public struct PluginOutputParser: OutputParsing {
     private let compiledRules: [(PluginRule, NSRegularExpression)]
 
     public init(manifest: PluginManifest) throws {
+        guard !manifest.identifier.isEmpty,
+              !manifest.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !manifest.version.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw PluginError.invalidBundle("Plugin identifier, name, and version are required.")
+        }
+        guard !manifest.rules.isEmpty, manifest.rules.count <= 64 else {
+            throw PluginError.invalidBundle("Plugins must contain between 1 and 64 parser rules.")
+        }
+        guard manifest.rules.allSatisfy({ !$0.pattern.isEmpty && $0.pattern.count <= 500 }) else {
+            throw PluginError.invalidBundle("Plugin patterns must contain between 1 and 500 characters.")
+        }
         self.manifest = manifest
         self.compiledRules = try manifest.rules.map { rule in
             (rule, try NSRegularExpression(pattern: rule.pattern, options: [.caseInsensitive]))
@@ -38,9 +49,10 @@ public struct PluginOutputParser: OutputParsing {
     }
 
     public func parse(line: String) -> AgentEvent? {
-        let range = NSRange(line.startIndex..., in: line)
-        for (rule, expression) in compiledRules where expression.firstMatch(in: line, range: range) != nil {
-            return AgentEvent(kind: rule.event, summary: rule.summary ?? line)
+        let clean = TerminalText.clean(line)
+        let range = NSRange(clean.startIndex..., in: clean)
+        for (rule, expression) in compiledRules where expression.firstMatch(in: clean, range: range) != nil {
+            return AgentEvent(kind: rule.event, summary: rule.summary ?? clean)
         }
         return nil
     }
@@ -115,4 +127,3 @@ public struct PluginStore {
         return true
     }
 }
-

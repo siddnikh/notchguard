@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import QuartzCore
 
 /// A short-lived, non-activating panel positioned beneath the camera housing.
 /// It intentionally contains one message and one recovery action only.
@@ -8,22 +9,32 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
 
     private var panel: NSPanel?
     private var closeWorkItem: DispatchWorkItem?
+    private var session: AgentSession?
 
-    public func show(_ event: AgentEvent) {
-        DispatchQueue.main.async { [weak self] in self?.present(event) }
+    public func show(_ event: AgentEvent, session: AgentSession) {
+        DispatchQueue.main.async { [weak self] in self?.present(event, session: session) }
     }
 
-    private func present(_ event: AgentEvent) {
+    public static func displayDuration(for kind: AgentEventKind) -> TimeInterval {
+        switch kind {
+        case .completed: return 6
+        case .failed: return 10
+        case .inputRequired, .approvalRequired: return 12
+        }
+    }
+
+    private func present(_ event: AgentEvent, session: AgentSession) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         closeWorkItem?.cancel()
         panel?.orderOut(nil)
+        self.session = session
 
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
-        let size = NSSize(width: 440, height: 78)
+        let size = NSSize(width: 382, height: 66)
         let frame = NSRect(
             x: screen.frame.midX - size.width / 2,
-            y: screen.frame.maxY - size.height - 28,
+            y: screen.frame.maxY - size.height - 22,
             width: size.width,
             height: size.height
         )
@@ -38,34 +49,48 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
-        panel.contentView = content(for: event, size: size)
+        panel.contentView = content(for: event, session: session, size: size)
+        panel.alphaValue = 0
         panel.orderFrontRegardless()
         self.panel = panel
 
-        let workItem = DispatchWorkItem { [weak panel] in panel?.orderOut(nil) }
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            panel.alphaValue = 1
+        } else {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.16
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.animator().alphaValue = 1
+            }
+        }
+
+        let workItem = DispatchWorkItem { [weak self] in self?.dismiss() }
         closeWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.displayDuration(for: event.kind), execute: workItem)
     }
 
-    private func content(for event: AgentEvent, size: NSSize) -> NSView {
+    private func content(for event: AgentEvent, session: AgentSession, size: NSSize) -> NSView {
         let effect = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
-        effect.material = .hudWindow
+        effect.material = .underWindowBackground
         effect.blendingMode = .behindWindow
         effect.state = .active
         effect.wantsLayer = true
-        effect.layer?.cornerRadius = 24
+        effect.layer?.backgroundColor = NSColor(calibratedWhite: 0.025, alpha: 0.96).cgColor
+        effect.layer?.cornerRadius = 22
         effect.layer?.masksToBounds = true
 
-        let icon = NSImageView()
-        icon.image = NSImage(systemSymbolName: symbol(for: event.kind), accessibilityDescription: event.title)
-        icon.contentTintColor = tint(for: event.kind)
-        icon.translatesAutoresizingMaskIntoConstraints = false
+        let status = NSView()
+        status.wantsLayer = true
+        status.layer?.backgroundColor = tint(for: event.kind).cgColor
+        status.layer?.cornerRadius = 4
+        status.translatesAutoresizingMaskIntoConstraints = false
 
-        let title = NSTextField(labelWithString: event.title)
+        let title = NSTextField(labelWithString: "\(session.agentName) \(event.actionTitle)")
         title.font = .systemFont(ofSize: 13, weight: .semibold)
-        let detail = NSTextField(labelWithString: event.summary)
+        title.textColor = NSColor(calibratedWhite: 0.97, alpha: 1)
+        let detail = NSTextField(labelWithString: "\(session.projectName)  ·  \(event.summary)")
         detail.font = .systemFont(ofSize: 11)
-        detail.textColor = .secondaryLabelColor
+        detail.textColor = NSColor(calibratedWhite: 0.68, alpha: 1)
         detail.lineBreakMode = .byTruncatingTail
         detail.maximumNumberOfLines = 1
         let labels = NSStackView(views: [title, detail])
@@ -74,39 +99,47 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         labels.spacing = 2
         labels.translatesAutoresizingMaskIntoConstraints = false
 
-        let button = NSButton(title: "Open Terminal", target: self, action: #selector(openTerminal))
+        let button = NSButton(title: "Return", target: self, action: #selector(openTerminal))
         button.bezelStyle = .inline
         button.font = .systemFont(ofSize: 11, weight: .medium)
+        button.contentTintColor = NSColor(calibratedWhite: 0.88, alpha: 1)
+        button.toolTip = "Return to the original Terminal tab"
         button.translatesAutoresizingMaskIntoConstraints = false
 
-        effect.addSubview(icon)
+        effect.addSubview(status)
         effect.addSubview(labels)
         effect.addSubview(button)
         NSLayoutConstraint.activate([
-            icon.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: 22),
-            icon.centerYAnchor.constraint(equalTo: effect.centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: 18),
-            icon.heightAnchor.constraint(equalToConstant: 18),
-            labels.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 12),
+            status.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: 19),
+            status.centerYAnchor.constraint(equalTo: effect.centerYAnchor),
+            status.widthAnchor.constraint(equalToConstant: 8),
+            status.heightAnchor.constraint(equalToConstant: 8),
+            labels.leadingAnchor.constraint(equalTo: status.trailingAnchor, constant: 11),
             labels.centerYAnchor.constraint(equalTo: effect.centerYAnchor),
             labels.trailingAnchor.constraint(lessThanOrEqualTo: button.leadingAnchor, constant: -12),
-            button.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -20),
+            button.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -17),
             button.centerYAnchor.constraint(equalTo: effect.centerYAnchor)
         ])
         return effect
     }
 
     @objc private func openTerminal() {
-        try? TerminalJumper.jump(to: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
-        panel?.orderOut(nil)
+        guard let session else { return }
+        try? TerminalJumper.jump(to: session.workingDirectory, terminalTTY: session.terminalTTY)
+        dismiss()
     }
 
-    private func symbol(for kind: AgentEventKind) -> String {
-        switch kind {
-        case .inputRequired: return "text.cursor"
-        case .approvalRequired: return "hand.raised.fill"
-        case .completed: return "checkmark.circle.fill"
-        case .failed: return "exclamationmark.triangle.fill"
+    private func dismiss() {
+        guard let panel else { return }
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            panel.orderOut(nil)
+        } else {
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.12
+                panel.animator().alphaValue = 0
+            }, completionHandler: {
+                panel.orderOut(nil)
+            })
         }
     }
 
@@ -119,4 +152,3 @@ public final class NotchOverlay: NSObject, @unchecked Sendable {
         }
     }
 }
-
