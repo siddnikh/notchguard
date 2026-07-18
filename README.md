@@ -42,6 +42,7 @@ That is the whole daily workflow. The child process keeps the current directory,
 - Only the explicit `notchguard update` command contacts this repository.
 
 Notchguard launches only Claude Code and Codex. It does not install, authenticate, or configure either agent.
+On first presentation it creates a small, signed UI helper in `~/Library/Application Support/Notchguard`. The helper exits after each cue; it is not a background service.
 
 ## Update or remove
 

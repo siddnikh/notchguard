@@ -10,3 +10,4 @@ Notchguard runs the locally installed agent command with the current terminal's 
 
 Plugins are declarative regular-expression manifests copied into `~/Library/Application Support/Notchguard/plugins`. The manual updater downloads the universal binary from this repository's latest GitHub release over HTTPS and validates that it is a signed Mach-O binary before replacement.
 
+The notch presenter is a locally generated, ad-hoc-signed application bundle containing the same verified executable. LaunchServices starts a fresh presenter for each cue, and that process exits when the cue closes.

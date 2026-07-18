@@ -33,7 +33,7 @@ struct Notchguard {
         case "demo": demo()
         case "update": print(try SelfUpdater.update())
         case "__present": try present(arguments: args)
-        case "version", "--version", "-v": print("notchguard 0.2.0")
+        case "version", "--version", "-v": print("notchguard \(BuildInfo.version)")
         case "help", "--help", "-h": print(help)
         default: throw CLIError.usage("Unknown command '\(command)'.\n\n\(help)")
         }
@@ -79,7 +79,7 @@ struct Notchguard {
         DispatchQueue.main.asyncAfter(
             deadline: .now() + NotchOverlay.displayDuration(for: payload.event.kind) + 0.3
         ) {
-            application.stop(nil)
+            application.terminate(nil)
         }
         application.run()
     }

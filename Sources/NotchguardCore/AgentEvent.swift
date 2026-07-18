@@ -1,5 +1,9 @@
 import Foundation
 
+public enum BuildInfo {
+    public static let version = "0.2.0"
+}
+
 public enum AgentEventKind: String, Codable, CaseIterable, Sendable {
     case inputRequired = "input_required"
     case approvalRequired = "approval_required"
