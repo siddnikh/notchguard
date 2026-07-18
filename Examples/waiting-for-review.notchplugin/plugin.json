@@ -1,0 +1,13 @@
+{
+  "identifier": "example.waiting-for-review",
+  "name": "Waiting for review",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "pattern": "REVIEW_NEEDED",
+      "event": "input_required",
+      "summary": "A review is waiting in your terminal"
+    }
+  ]
+}
+
