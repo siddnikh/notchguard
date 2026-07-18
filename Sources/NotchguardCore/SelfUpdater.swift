@@ -22,6 +22,7 @@ public enum SelfUpdater {
         do {
             try data.write(to: temporary, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: temporary.path)
+            guard try hasValidSignature(temporary) else { throw UpdateError.invalidSignature }
             _ = try FileManager.default.replaceItemAt(destination, withItemAt: temporary)
         } catch {
             try? FileManager.default.removeItem(at: temporary)
@@ -53,12 +54,24 @@ public enum SelfUpdater {
             magic == Data([0xCF, 0xFA, 0xED, 0xFE]) || // 64-bit, little endian
             magic == Data([0xFE, 0xED, 0xFA, 0xCF])
     }
+
+    private static func hasValidSignature(_ binary: URL) throws -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        process.arguments = ["--verify", binary.path]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        process.waitUntilExit()
+        return process.terminationStatus == 0
+    }
 }
 
 public enum UpdateError: LocalizedError {
     case symbolicLink(String)
     case notWritable(String)
     case invalidDownload
+    case invalidSignature
 
     public var errorDescription: String? {
         switch self {
@@ -68,6 +81,8 @@ public enum UpdateError: LocalizedError {
             return "Notchguard is not writable at \(path). Reinstall with a writable destination."
         case .invalidDownload:
             return "The release download was not a valid Notchguard macOS binary."
+        case .invalidSignature:
+            return "The release download did not pass macOS code-signature verification."
         }
     }
 }

@@ -1,61 +1,71 @@
 # Notchguard
 
-Notchguard is a small native macOS wrapper for **Claude Code** and **Codex**. It watches terminal output for the moments that need you — input, approval, completion, or a failure — then places a compact native panel under the notch. One click opens Terminal at the working directory; the normal macOS banner is kept as an accessible fallback.
+Leave the terminal. Come back when your agent actually needs you.
 
-It deliberately launches only Claude Code and Codex. It does not send prompts, terminal output, or telemetry anywhere.
+Notchguard wraps **Claude Code** and **Codex** on macOS. It preserves the real interactive session, stays silent while work is moving, and places one compact cue beneath the notch for approval, input, completion, or failure.
 
 ## Install
 
-Requirements: macOS 13 (Ventura) or newer, Xcode Command Line Tools, and either the `claude` or `codex` command already installed and authenticated.
+macOS 13 or newer. No Xcode and no sudo required.
 
 ```sh
-git clone https://github.com/YOUR-GITHUB-USER/notchguard.git
-cd notchguard
-swift build -c release
-install -m 755 .build/release/notchguard /usr/local/bin/notchguard
+curl -fsSL https://raw.githubusercontent.com/siddnikh/notchguard/main/scripts/install.sh | bash
 ```
 
-For a universal Apple Silicon + Intel binary:
-
-```sh
-./scripts/build-universal.sh
-install -m 755 dist/notchguard /usr/local/bin/notchguard
-```
+The installer places the universal Apple Silicon + Intel binary in `~/.local/bin` and tells you if that directory needs adding to your `PATH`.
 
 ## Use
 
-Use the same agent commands you normally use, with `notchguard` in front:
+Put `notchguard` before the command you already run:
 
 ```sh
 notchguard claude
-notchguard claude "review the open changes"
 notchguard codex
+```
+
+Arguments pass through unchanged:
+
+```sh
+notchguard claude "review the open changes"
 notchguard codex "explain this failing test"
 ```
 
-The wrapped process retains your current directory, environment, standard input, exit status, and output. It is launched through a pseudo-terminal, so interactive Claude Code and Codex flows continue to behave like a terminal session. On first run macOS asks whether Notchguard may show notifications. Notchguard only notifies for an interaction boundary; normal streaming output stays silent.
+That is the whole daily workflow. The child process keeps the current directory, environment, pseudo-terminal interaction, output, input, and exit status. When attention is needed, **Return** brings the original Terminal tab forward; if that tab is gone, Terminal opens at the project directory.
 
-`notchguard jump` activates Terminal and opens the current directory using AppleScript, falling back to `open -a Terminal` when needed.
+## Quiet by design
 
-## Update
+- No menu bar item, settings window, account, daemon, or analytics.
+- No prompt or terminal-output storage.
+- No network access during agent sessions.
+- Only the explicit `notchguard update` command contacts this repository.
 
-Updates are always manual. `notchguard update` downloads the latest universal binary from this repository's public releases and atomically replaces a directly installed, writable binary. It refuses to replace symbolic links, so package-managed installs stay under their package manager's control.
+Notchguard launches only Claude Code and Codex. It does not install, authenticate, or configure either agent.
+
+## Update or remove
 
 ```sh
 notchguard update
 ```
 
-## Plugins
-
-Plugins are local folders ending in `.notchplugin` with a `plugin.json` manifest. They add parser rules without running arbitrary plugin code.
+Updates are manual and replace a directly installed, writable binary atomically. Package-managed symlinks are left alone.
 
 ```sh
-notchguard plugins add Examples/waiting-for-review.notchplugin
-notchguard plugins list
-notchguard plugins remove example.waiting-for-review
+curl -fsSL https://raw.githubusercontent.com/siddnikh/notchguard/main/scripts/uninstall.sh | bash
 ```
 
-Installed plugins live in `~/Library/Application Support/Notchguard/plugins`.
+Add `--purge` when running `scripts/uninstall.sh` locally to remove installed parser plugins as well.
+
+## Parser plugins
+
+Plugins extend output detection with local, declarative rules. They cannot execute code.
+
+```sh
+notchguard plugins add ./my-parser.notchplugin
+notchguard plugins list
+notchguard plugins remove my-team.parser
+```
+
+A plugin is a directory ending in `.notchplugin` with a `plugin.json`:
 
 ```json
 {
@@ -72,21 +82,21 @@ Installed plugins live in `~/Library/Application Support/Notchguard/plugins`.
 }
 ```
 
-Supported events are `input_required`, `approval_required`, `completed`, and `failed`. Patterns are case-insensitive regular expressions. A malformed plugin is rejected on install.
+Supported events are `input_required`, `approval_required`, `completed`, and `failed`. Patterns are case-insensitive regular expressions. See the working example in [`Examples/waiting-for-review.notchplugin`](Examples/waiting-for-review.notchplugin).
 
-## Development
+## Build from source
+
+Building requires Xcode or matching Xcode Command Line Tools:
 
 ```sh
 swift test
-swift run notchguard --help
+./scripts/build-universal.sh
 ```
 
-The project is a dependency-free Swift Package, targeted at macOS 13+. `scripts/build-universal.sh` produces a universal binary appropriate for packaging in a signed `.pkg`, a Homebrew tap, or a Sparkle-enabled app wrapper.
+The universal, ad-hoc-signed binary is written to `dist/notchguard`. Notchguard targets macOS 13+ and has no package dependencies.
 
-## Privacy
+## Contributing and security
 
-Notchguard has no analytics or background daemon. Output is parsed in memory and only the short, relevant line becomes the local notification body. The sole network operation is the explicit `notchguard update` command, which downloads the public release binary from this repository.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a feature. Report vulnerabilities through GitHub's private vulnerability reporting process described in [SECURITY.md](SECURITY.md).
 
-## License
-
-[MIT](LICENSE)
+MIT licensed. See [LICENSE](LICENSE).
